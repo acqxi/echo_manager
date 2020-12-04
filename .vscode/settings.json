@@ -1,0 +1,36 @@
+{
+    "python.autoComplete.extraPaths": [
+        "C:\\Users\\USER\\.conda\\envs\\discordBotBlaz",
+        "D:\\VirtualStudio_Code_Programming\\VSC_LTS\\bot\\dual_manager"
+    ],
+    "python.pythonPath": "C:\\ProgramData\\Miniconda3\\envs\\discordBotBlaz\\python.exe",
+    /*"terminal.integrated.shellArgs.windows": [
+    "/K",
+    "C:\\ProgramData\\Miniconda3\\Scripts\\activate.bat C:\\ProgramData\\Miniconda3 & conda activate dash_plotly"
+],*/
+    "code-runner.executorMap": {
+        "python": "C:\\ProgramData/Miniconda3/envs/discordBotBlaz/python.exe"
+    },
+    "python.linting.flake8Enabled": true,
+    "python.linting.flake8Args": [
+        "--max-line-length=128",
+        "--ignore=E201,E202,E262,E265,F401"
+    ],
+    "python.formatting.provider": "yapf",
+    "python.formatting.yapfArgs": [
+        "--style=D:\\VirtualStudio_Code_Programming\\VSCode_Python3_DiscordBot_dual\\.vscode\\.style.yapf"
+    ],
+    "python.linting.pylintEnabled": false,
+    "editor.formatOnSave": true,
+    "python.venvPath": "C:\\Users\\USER\\AppData\\Local\\conda\\conda\\envs",
+    "terminal.integrated.automationShell.windows": "",
+    "terminal.integrated.cursorStyle": "underline",
+    "terminal.integrated.shellArgs.windows": [
+        "powershell -ExecutionPolicy ByPass -NoExit -Command \"& 'C:\\ProgramData\\Miniconda3\\shell\\condabin\\conda-hook.ps1' ; conda activate discordBotBlaz\""
+    ],
+    "code-runner.runInTerminal": true,
+    "python.analysis.extraPaths": [
+        "C:\\Users\\USER\\.conda\\envs\\discordBotBlaz",
+        "D:\\VirtualStudio_Code_Programming\\VSCode_Python3_DiscordBot_dual"
+    ],
+}
