@@ -1,15 +1,13 @@
 import os
 import sqlite3
-from typing import Sequence
-
-from discord.ext.commands import context
-
-from . import gReactVal
 
 import discord
 from discord.ext import commands
+from discord.ext.commands import context
 from discord.ext.commands.core import has_permissions
 from discord.ext.commands.errors import DisabledCommand
+
+from . import gReactVal
 
 conn = sqlite3.connect( os.path.join( os.path.dirname( __file__ ) + '\\reaction.db' ) )
 cursor = conn.cursor()
@@ -47,7 +45,7 @@ def transGRL2S( di: dict ):
     j = '單選關聯:\n'
     for key, item in di.items():
         s += f"{item[0].name}:{item[1].mention}\n" if item[ 2 ] else ''
-        j += f"{item[0].name}:{item[1].mention}\n" if item[ 2 ] else ''
+        j += f"{item[0].name}:{item[1].mention}\n" if not item[ 2 ] else ''
     return s + j
 
 
@@ -61,7 +59,7 @@ class ReactionConfigSetting( commands.Cog ):
         '''
         The default check for this cog whenever a command is used. Returns True if the command is allowed.
         '''
-        return ctx.guild.id in [ 690548499233636362, 741429518484635749 ]
+        return ctx.guild.id in [ 690548499233636362, 741429518484635749, 777758608930766878 ]
 
     @staticmethod
     async def sentMsgBaseData( sent, guild: discord.Guild, msg: discord.Message ):
@@ -80,34 +78,7 @@ class ReactionConfigSetting( commands.Cog ):
 
     @reaction_relationship.command( name='active', aliases=[ 'a' ] )
     async def active( self, ctx: commands.Context ):
-
-        error_code = ''
-        conn = sqlite3.connect( os.path.join( os.path.dirname( __file__ ) + '\\reaction.db' ) )
-        cursor = conn.cursor()
-        for row in cursor.execute( f"SELECT msg, emoji, role, type='ind' FROM ind WHERE guild={ctx.guild.id}" ):
-            try:
-                emoji = discord.Emoji( row[ 1 ] )
-            except TypeError:
-                emoji = gReactVal.DefaultEmoji( row[ 1 ] )
-
-            if ( role := ctx.guild.get_role( row[ 2 ] ) ) is None:
-                error_code += '\n' + str( row )
-                continue
-
-            if isinstance( emoji, gReactVal.DefaultEmoji ) and '<' in emoji.name:
-                error_code += '\n' + str( row )
-                continue
-
-            if ctx.guild.id not in list( gReactVal.reactSetInd.keys() ):
-                gReactVal.reactSetInd[ ctx.guild.id ] = { row[ 0 ]: { row[ 1 ]: ( emoji, role, row[ 3 ] ) } }
-            elif row[ 0 ] not in list( gReactVal.reactSetInd[ ctx.guild.id ].keys() ):
-                gReactVal.reactSetInd[ ctx.guild.id ][ row[ 0 ] ] = { row[ 1 ]: ( emoji, role, row[ 3 ] ) }
-            else:
-                gReactVal.reactSetInd[ ctx.guild.id ][ row[ 0 ] ][ row[ 1 ] ] = ( emoji, role, row[ 3 ] )
-        await ctx.send( f"loaded ! {('below sq was broke and not be loaded' + error_code ) if error_code != '' else ''}" )
-        conn.close()
-
-        print( gReactVal.reactSetInd )
+        await gReactVal.activeFunction( ctx.send, ctx.guild )
 
     async def write_raw( self, ctx: commands.Context, msg: discord.Message, emoji: str, role: discord.Role, type: str ):
         try:
@@ -116,15 +87,15 @@ class ReactionConfigSetting( commands.Cog ):
             emoji = gReactVal.DefaultEmoji( emoji )
 
         if ctx.guild.id not in list( gReactVal.reactSetInd.keys() ):
-            gReactVal.reactSetInd[ ctx.guild.id ] = { msg.id: { emoji.name: ( emoji, role, type == 'ind' ) } }
+            gReactVal.reactSetInd[ ctx.guild.id ] = { msg.id: { str( emoji ): ( emoji, role, type == 'ind' ) } }
         elif msg.id not in list( gReactVal.reactSetInd[ ctx.guild.id ].keys() ):
-            gReactVal.reactSetInd[ ctx.guild.id ][ msg.id ] = { emoji.name: ( emoji, role, type == 'ind' ) }
+            gReactVal.reactSetInd[ ctx.guild.id ][ msg.id ] = { str( emoji ): ( emoji, role, type == 'ind' ) }
         else:
-            gReactVal.reactSetInd[ ctx.guild.id ][ msg.id ][ emoji.name ] = ( emoji, role, type == 'ind' )
+            gReactVal.reactSetInd[ ctx.guild.id ][ msg.id ][ str( emoji ) ] = ( emoji, role, type == 'ind' )
 
         await ReactionConfigSetting.sentMsgBaseData( ctx.send, ctx.guild, msg )
 
-        s = save_to_sqlite( 'ind', ctx.guild.id, msg.id, emoji.name, role.id, type )
+        s = save_to_sqlite( 'ind', ctx.guild.id, msg.id, str( emoji ), role.id, type )
 
         await msg.add_reaction( emoji=emoji.name )
         '''await ctx.send(
@@ -132,7 +103,7 @@ class ReactionConfigSetting( commands.Cog ):
             \nWrite SQL with {s}" )'''
         await ctx.send(
             (
-                f"{ctx.author.mention} set {'independence' if type=='ind' else 'disjointness'} {emoji.name} with",
+                f"{ctx.author.mention} set {'independence' if type=='ind' else 'disjointness'} {emoji} with",
                 f" {role.mention} at {m if len(m:=msg.content) else (m[:7] +'...')} that Write SQL with {s}" ) )
 
     @reaction_relationship.command( name='write_ind', aliases=[ 'wi' ] )

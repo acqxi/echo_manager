@@ -1,6 +1,38 @@
 import datetime as dt
+from logging import error
+from warnings import resetwarnings
+
 import discord
+from discord import reaction
 from discord.ext import commands
+
+from . import gReactVal
+
+g_dev_limit_rule = {}
+
+g_temp_msg = {}
+
+
+async def get_msg(
+        guild: discord.Guild = None,
+        channelID: int = None,
+        channel: discord.TextChannel = None,
+        msgID: int = None ) -> discord.Message:
+    try:
+        return g_temp_msg[ msgID ]
+    except KeyError:
+        if guild is not None and channelID is not None:
+            channel = guild.get_channel( channel_id=channelID )
+        elif guild is None and channel is None:
+            raise Exception( 'guild, channel both None error' )
+
+        msg = await channel.fetch_message( msgID )
+        g_temp_msg[ msgID ] = msg
+        return msg
+
+
+def should_remove_reaction():
+    return False
 
 
 class ReactionAddAndRemoveProcess( commands.Cog, name='Calculation Commands' ):
@@ -16,31 +48,60 @@ class ReactionAddAndRemoveProcess( commands.Cog, name='Calculation Commands' ):
         return True
 
     @commands.Cog.listener()
-    async def on_raw_reaction_add( self, rawReactionEventData: discord.RawReactionActionEvent ):
-        '''
-        判斷標準順序
-        1.判斷頻道
-        2.判斷訊息
-        3.判斷emoji
-        4.判斷身分組
-        5.執行
-        '''
-        print( '\non_raw_reaction_add is be called' )  # , {rawReactionEventData}')
-        print( F"{self.bot.get_guild( rawReactionEventData.guild_id ).get_member( rawReactionEventData.user_id )}" )
+    async def on_raw_reaction_add( self, rRED: discord.RawReactionActionEvent ):  #rRED : rawReactionEventData
+        ''''''
+        print( '\non_raw_reaction_add is be called' )  # , {rRED}')
+        #print( F"{self.bot.get_guild( rRED.guild_id ).get_member( rRED.user_id )}" )
 
-    @commands.command( name="add_reaction", aliases=[ 'ar' ] )
-    @commands.has_permissions( administrator=True )
-    async def add_reaction( self, ctx: commands.Context, msg: discord.Message, emojis="" ):
-        for emoji in emojis.split():
-            await msg.add_reaction( emoji )
-        await ctx.send( 'reaction added!' )
-        pass
+        try:
+            react_dict = gReactVal.reactSetInd[ rRED.guild_id ][ rRED.message_id ]
+        except KeyError:
+            print( 'no co msg' )
+            return
+
+        guild = self.bot.get_guild( rRED.guild_id )
+        member = guild.get_member( rRED.user_id )
+
+        print( f"{member.display_name} press {rRED.emoji} at msgID:{rRED.message_id}" )
+
+        if should_remove_reaction():  #TODO
+            await get_msg( guild, rRED.channel_id, msgID=rRED.message_id ).remove_reaction( rRED.emoji, member )
+
+        try:
+            args = react_dict[ str( rRED.emoji ) ]
+            if not args[ 2 ]:
+                for emoji, relation in react_dict.items():
+                    if relation[ 2 ]:
+                        continue
+                    if relation[ 1 ] in member.roles:
+                        await get_msg( guild, rRED.channel_id, msgID=rRED.message_id ).remove_reaction( relation[ 0 ], member )
+            await member.add_roles( args[ 1 ] )
+        except KeyError:
+            print( 'invaild emoji' )
+            return
 
     @commands.Cog.listener()
-    async def on_raw_reaction_remove( self, rawReactionEventData ):
-        print( '\non_raw_reaction_remove is be called' )  # , {rawReactionEventData}')
-        print(
-            F"{self.bot.get_guild( rawReactionEventData.guild_id ).get_member( rawReactionEventData.user_id ).display_name}" )
+    async def on_raw_reaction_remove( self, rRED ):
+        print( '\non_raw_reaction_remove is be called' )  # , {rRED}')
+        #print( F"{self.bot.get_guild( rRED.guild_id ).get_member( rRED.user_id ).display_name}" )
+
+        try:
+            react_dict = gReactVal.reactSetInd[ rRED.guild_id ][ rRED.message_id ]
+        except KeyError:
+            print( 'no co msg' )
+            return
+
+        guild = self.bot.get_guild( rRED.guild_id )
+        member = guild.get_member( rRED.user_id )
+
+        print( f"{member.display_name} press {rRED.emoji} at msgID:{rRED.message_id}" )
+
+        try:
+            args = react_dict[ str( rRED.emoji ) ]
+            await member.remove_roles( args[ 1 ], reason='unReact msg' )
+        except KeyError:
+            print( 'invaild emoji' )
+            return
 
 
 def setup( bot ):

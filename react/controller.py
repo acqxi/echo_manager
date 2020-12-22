@@ -20,8 +20,7 @@ c.execute( "CREATE TABLE IF NOT EXISTS single_role (msg integer, emoji text, rol
 for row in c.execute( 'SELECT * FROM ind ORDER BY msg' ):
     print( row )
 
-for row in c.execute(
-        "SELECT * FROM single_role WHERE msg=782510126119518230 AND emoji='<:black_question:782510826224353320>'" ):
+for row in c.execute( "SELECT emoji, type='ind' FROM ind" ):
     print( 'OC => ' + str( row ) )
 
 conn.close()
