@@ -2,11 +2,11 @@ import os
 
 import discord
 from discord.ext import commands
-from dotenv import load_dotenv
 
 from keep_alive import keep_alive
 
-load_dotenv()
+#from dotenv import load_dotenv
+#load_dotenv()
 
 intents = discord.Intents.default()
 intents.members = True
