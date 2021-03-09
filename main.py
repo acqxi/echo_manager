@@ -40,5 +40,5 @@ if __name__ == '__main__':  # Ensures this is the file being ran
         bot.load_extension( extension )  # Loades every extension.
 
 keep_alive()  # Starts a webserver to be pinged.
-token = os.environ.get( "DISCORD_BOT_SECRET" )
+token = os.getenv( "DISCORD_BOT_SECRET" )
 bot.run( token )  # Starts the bot
