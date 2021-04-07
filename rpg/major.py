@@ -7,6 +7,7 @@ import discord
 from discord.ext import commands
 
 RANDOM_VALUE = 15
+MONSTER_TIME = 3
 
 
 class Monster():
@@ -15,34 +16,39 @@ class Monster():
     def __init__( self, name='enemyA', hp=100 ):
         self.name = name
         self.hp = hp
+        self.sp = 0
 
     def is_alive( self ):
         return self.hp > 0
 
-    def action( self, command: str ) -> Union[ int, bool ]:
+    def action( self, command: str ) -> Tuple[ bool, int ]:
         if command == 'a':
-            return rd.randint( 1, RANDOM_VALUE )
+            return True, rd.randint( 1, RANDOM_VALUE * MONSTER_TIME )
         elif command == 'r':
-            return -1 * rd.randint( 1, RANDOM_VALUE )
+            return True, -1 * rd.randint( 1, RANDOM_VALUE )
         else:
-            return False
+            return False, 0
 
 
 class Player():
     """"""
 
-    def __init__( self, userObj: discord.Member, name, hp ):
+    def __init__( self, userObj: discord.Member, name, hp=100, sp=15 ):
         self.uo = userObj
         self.name = name
         self.hp = hp
+        self.sp = sp
 
-    def action( self, command: str ) -> Union[ int, bool ]:
+    def action( self, command: str ) -> Tuple[ bool, int ]:
         if command == 'a':
-            return rd.randint( 1, RANDOM_VALUE )
+            return True, rd.randint( 1, RANDOM_VALUE )
         elif command == 'r':
-            return -1 * rd.randint( 1, RANDOM_VALUE )
+            if self.sp < 4:
+                return False, 1
+            self.sp -= 4
+            return True, -1 * rd.randint( 1, RANDOM_VALUE )
         else:
-            return False
+            return False, 0
 
     def is_alive( self ):
         return self.hp > 0
@@ -94,7 +100,12 @@ class Battle():
         return self.our + self.ene, anno
 
     def send_damege( self, attacker: Union[ Player, Monster ], taker: Union[ Player, Monster ], action: str ) -> str:
-        taker.hp -= ( dhp := attacker.action( action ) )
+        succ, dhp = attacker.action( action )
+        if not succ:
+            return [ '', f"[{attacker.name}]錯估了自己的SP存量，發動技能失敗。" ][ dhp ]
+
+        taker.hp -= dhp
+
         if taker in self.our:
             self.our_loss += dhp
         else:
@@ -152,7 +163,9 @@ class RPG( commands.Cog ):
             our=[ Player( player, name=player.nick, hp=100 ) for player in players_list_obj ], enemy=[ Monster() ] )
         for entities, anno in battle:
 
-            await ctx.send( anno + '\n'.join( [ f"實體( {id} )=>名字：{v.name},血量：{v.hp}" for id, v in enumerate( entities ) ] ) )
+            await ctx.send(
+                anno + '\n'.join(
+                    [ f"實體( {id} )=>名字：{v.name[:3]+v.name[-3:]:^5}，hp：{v.hp}，sp：{v.sp}" for id, v in enumerate( entities ) ] ) )
             anno2 = ''
             for entity in entities:
                 if isinstance( entity, Player ):
@@ -165,17 +178,20 @@ class RPG( commands.Cog ):
 
                     r_args: Tuple[ str ] = response_msg.content.split()
                     if r_args[ 0 ] not in [ 'a', 'r' ]:
-                        response_msg.delete()
+                        #await response_msg.delete()
                         anno2 += entity.uo.mention + '放棄了此次攻擊\n'
                         continue
-                    if not r_args[ 1 ].isnumeric() and r_args[ 1 ] in range( len( entities ) ):
-                        response_msg.delete()
+                    if not r_args[ 1 ].isnumeric() or eval( r_args[ 1 ] ) not in range( len( entities ) ):
+                        #await response_msg.delete()
                         anno2 += entity.uo.mention + '放棄了此次攻擊\n'
                         continue
                     anno2 += battle.send_damege(
                         attacker=entity, taker=entities[ eval( r_args[ 1 ] ) ], action=r_args[ 0 ] ) + '\n'
+                    #await response_msg.delete()
                 elif isinstance( entity, Monster ):
-                    anno2 += battle.send_damege( attacker=entity, taker=entities[ rd.randint( 0, 1 ) ], action='a' ) + '\n'
+                    num_of_alive_p = len( [ e for e in entities if isinstance( e, Player ) ] )
+                    anno2 += battle.send_damege(
+                        attacker=entity, taker=entities[ rd.randint( 0, num_of_alive_p - 1 ) ], action='a' ) + '\n'
 
             await ctx.send( anno2 )
 
